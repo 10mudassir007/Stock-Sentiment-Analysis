@@ -1,0 +1,7 @@
+yfinance
+numpy
+streamlit
+plotly
+tensorflow
+contractions
+nltk
