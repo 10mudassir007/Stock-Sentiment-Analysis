@@ -1,3 +1,4 @@
+import numpy as np
 import yfinance as yf
 import streamlit as st
 import plotly.graph_objects as go
@@ -5,18 +6,34 @@ import plotly.graph_objects as go
 ticker = st.text_input("Enter text")
 button = st.button("Predict")
 
-stock = yf.Ticker(ticker)
-data = stock.history(period='1y')
+
 if button:
+    stock = yf.Ticker(ticker)
+    data = stock.history(period='5y')
     try:
-        data['20MA'] = data['Close'].rolling(window=20).mean()
-        data['50MA'] = data['Close'].rolling(window=50).mean()
-        data['200MA'] = data['Close'].rolling(window=200).mean()
-
-        data['Sum'] = (data['Close'][-30:] + data['High'][-30:] + data['Low'][-30:] + data['Open'][-30:] + data['20MA'][-30:] + data['50MA'][-30:] + data['200MA'][-30:])
-        mean_price = data['Sum'].mean()
-        current_price = data['Close'][-1] + data['High'][-1] + data['Low'][-1] + data['Open'][-1] + data['20MA'][-1] + data['50MA'][-1] + data['200MA'][-1]
-
+        data['Sum'] = (data['Close'] + data['High'] + data['Low'] + data['Open'])
+        mean_price = data['Sum'][:30].mean()
+        
+        current_price = data['Close'][-1] + data['High'][-1] + data['Low'][-1] + data['Open'][-1]
+        
+        sentiments = [0 for _ in range(len(data['Sum']))]
+        for i in range(30,len(data['Sum'])):
+            if data['Sum'][:i].mean() is not np.nan:
+                curr_price = (data['Sum'][i])
+                me_price = data['Sum'][:i].mean()
+                if curr_price >= me_price:
+                    sentiments[i] = (curr_price - me_price)
+                elif me_price > curr_price:
+                    sentiments[i] = (me_price - curr_price)
+            else:
+                sentiments[i] = 0
+        
+        data['Sentiments'] = sentiments
+        data['20MA'] = data['Sentiments'].rolling(window=20).mean()
+        data['50MA'] = data['Sentiments'].rolling(window=50).mean()
+        data['200MA'] = data['Sentiments'].rolling(window=200).mean()
+        
+        st.write(f"<h3>Stock Price: {round((data['Close'][-1]),2)}<h3>",unsafe_allow_html=True)
         if current_price > mean_price:
             pred = "Bullish"
         elif current_price < mean_price:
@@ -27,14 +44,10 @@ if button:
 
         fig = go.Figure()
 
-        fig.add_trace(go.Scatter(x=data.index[-30:], y=data['Close'][-30:], mode='lines+markers', name='Close Price', line=dict(color='green')))
-        fig.add_trace(go.Scatter(x=data.index[-30:], y=data['Open'][-30:], mode='lines+markers', name='Open Price', line=dict(color='red')))
-        fig.add_trace(go.Scatter(x=data.index[-30:], y=data['Low'][-30:], mode='lines+markers', name='Low Price', line=dict(color='blue')))
-        fig.add_trace(go.Scatter(x=data.index[-30:], y=data['High'][-30:], mode='lines+markers', name='High Price', line=dict(color='orange')))
-
         fig.add_trace(go.Scatter(x=data.index[-20:], y=data['20MA'][-20:], mode='lines', name='20-day MA', line=dict(color='purple', dash='dash')))
         fig.add_trace(go.Scatter(x=data.index[-50:], y=data['50MA'][-50:], mode='lines', name='50-day MA', line=dict(color='yellow', dash='dash')))
         fig.add_trace(go.Scatter(x=data.index[-200:], y=data['200MA'][-200:], mode='lines', name='200-day MA', line=dict(color='pink', dash='dash')))
+        fig.add_trace(go.Scatter(x=data.index[-30:], y=data['Sentiments'][-30:], mode='lines', name='Sentiment', line=dict(color='red', dash='dash')))
 
         fig.update_layout(
                         title=f'{ticker} Stock Price Over Last Month',
