@@ -10,7 +10,7 @@ button = st.button("Predict")
 
 if button:
     stock = yf.Ticker(ticker)
-    data = stock.history(period='1y')
+    data = stock.history(period='5y')
     stock_price = data['Close'][-1]
     if True:
         sc = MinMaxScaler(feature_range=(0, 1))
@@ -55,7 +55,7 @@ if button:
             title=f'{ticker} Stock Price Over Last Month',
             xaxis_title='Date',
             yaxis_title='Price',
-            xaxis_range=[data.index[-30], data.index[-1]],
+            xaxis_range=[data.index[-180], data.index[-1]],
             template='plotly_dark'
         )
         st.plotly_chart(fig)
@@ -72,6 +72,7 @@ if button:
             title=f'{ticker} Cointegration Graph (Price vs Sentiment)',
             xaxis_title='Date',
             yaxis_title='Normalized Price / Sentiment',
+            xaxis_range=[data.index[-180], data.index[-1]],
             template='plotly_dark'
         )
 
