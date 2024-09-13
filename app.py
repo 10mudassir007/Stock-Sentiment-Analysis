@@ -12,7 +12,7 @@ if button:
     stock = yf.Ticker(ticker)
     data = stock.history(period='5y')
     stock_price = data['Close'][-1]
-    if True:
+    try:
         sc = MinMaxScaler(feature_range=(0, 1))
         data['Close'] = sc.fit_transform(data[['Close']])
         data['Open'] = sc.fit_transform(data[['Open']])
@@ -37,8 +37,8 @@ if button:
         
         data['Price'] = data['Sum'] / 4
     
-        sentiment_scaler = MinMaxScaler(feature_range=(0, 1))
-        data['Sentiments'] = sentiment_scaler.fit_transform(np.array(sentiments).reshape(-1, 1))
+       # sentiment_scaler = MinMaxScaler(feature_range=(min(data['Close']), ))
+        data['Sentiments'] = sentiments #sentiment_scaler.fit_transform(np.array(sentiments).reshape(-1, 1))
         data['20MA'] = data['Sentiments'].rolling(window=20).mean()
         data['50MA'] = data['Sentiments'].rolling(window=50).mean()
         data['200MA'] = data['Sentiments'].rolling(window=200).mean()
@@ -79,5 +79,8 @@ if button:
         # Plot the cointegration graph
         st.plotly_chart(fig2)
 
-    # except Exception as e:
-    #     st.error("Stock Not Found")
+        sents = data['Sentiments'].to_frame()
+        sent_csv = sents.to_csv(index=False)
+        st.download_button(label="Export Sentiment as csv",data=sent_csv,file_name="sentiment.csv",mime="text/csv",)
+    except Exception as e:
+        st.error("Stock Not Found")
