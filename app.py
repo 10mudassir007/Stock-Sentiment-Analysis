@@ -5,6 +5,14 @@ import plotly.graph_objects as go
 from statsmodels.tsa.stattools import coint
 from sklearn.preprocessing import MinMaxScaler
 
+def classify_sentiment(sentiment_value):
+    if sentiment_value > 0.05:  # You can adjust this threshold
+        return 'Positive'
+    elif sentiment_value < -0.05:  # Negative sentiment threshold
+        return 'Negative'
+    else:
+        return 'Neutral'
+
 ticker = st.text_input("Enter text")
 button = st.button("Predict")
 
@@ -19,6 +27,8 @@ if button:
         data['Low'] = sc.fit_transform(data[['Low']])
         data['High'] = sc.fit_transform(data[['High']])
         data['Sum'] = (data['Close'] + data['High'] + data['Low'] + data['Open'])
+        
+        
         
         # Adjusted Sentiments Calculation
         sentiments = [0 for _ in range(len(data['Sum']))]
@@ -36,12 +46,26 @@ if button:
                 sentiments[i] = 0
         
         data['Price'] = data['Sum'] / 4
-    
+
        # sentiment_scaler = MinMaxScaler(feature_range=(min(data['Close']), ))
         data['Sentiments'] = sentiments #sentiment_scaler.fit_transform(np.array(sentiments).reshape(-1, 1))
         data['20MA'] = data['Sentiments'].rolling(window=20).mean()
         data['50MA'] = data['Sentiments'].rolling(window=50).mean()
         data['200MA'] = data['Sentiments'].rolling(window=200).mean()
+
+        current_price = (data['Close'][-1] + data['High'][-1] + data['Low'][-1] + data['Open'][-1])
+        mean_price = data['Sum'][:30].mean()
+
+        if current_price > mean_price:
+            pred = "Bullish"
+        elif current_price < mean_price:
+            pred = "Bearish"
+        else:
+            pred = "Neutral"
+
+
+        st.write(f"<h3>Sentiment: {pred}<h3>",unsafe_allow_html=True)
+        
 
         st.write(f"<h3>Stock Price: {round((stock_price),2)}<h3>",unsafe_allow_html=True)
 
