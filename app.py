@@ -5,14 +5,6 @@ import plotly.graph_objects as go
 from statsmodels.tsa.stattools import coint
 from sklearn.preprocessing import MinMaxScaler
 
-def classify_sentiment(sentiment_value):
-    if sentiment_value > 0.05:  # You can adjust this threshold
-        return 'Positive'
-    elif sentiment_value < -0.05:  # Negative sentiment threshold
-        return 'Negative'
-    else:
-        return 'Neutral'
-
 ticker = st.text_input("Enter text")
 button = st.button("Predict")
 
