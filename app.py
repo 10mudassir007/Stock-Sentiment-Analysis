@@ -1,18 +1,23 @@
 import numpy as np
+import pandas as pd
 import yfinance as yf
 import streamlit as st
 import plotly.graph_objects as go
-from statsmodels.tsa.stattools import coint
+#from statsmodels.tsa.stattools import coint
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.svm import SVR
+from statsmodels.tsa.arima.model import ARIMA
 
 ticker = st.text_input("Enter text")
 button = st.button("Predict")
 
 if button:
-    stock = yf.Ticker(ticker)
-    data = stock.history(period='5y')
-    stock_price = data['Close'][-1]
+    
     try:
+        stock = yf.Ticker(ticker)
+        data = stock.history(period='5y')
+        stock_price = data['Close'][-1]
+        prices = data['Close']
         sc = MinMaxScaler(feature_range=(0, 1))
         data['Close'] = sc.fit_transform(data[['Close']])
         data['Open'] = sc.fit_transform(data[['Open']])
@@ -75,28 +80,49 @@ if button:
             template='plotly_dark'
         )
         st.plotly_chart(fig)
-        score, p_value, _ = coint(data['Sum'], data['Sentiments'])
+        
+        dates = np.array(pd.to_datetime(data.index).map(pd.Timestamp.toordinal)).reshape(-1,1)
+        today = dates.max()
+        future_dates = np.array([today + i for i in range(1,91)]).reshape(-1,1)
 
-        # Display the p-value from cointegration tes
+        model = SVR(C=100)
+        model.fit(dates,prices)
 
-        # Plot the stock prices and sentiments
-        fig2 = go.Figure()
-        fig2.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name='Stock Price Sum', line=dict(color='blue', dash='solid')))
-        fig2.add_trace(go.Scatter(x=data.index, y=data['Sentiments'], mode='lines', name='Sentiment', line=dict(color='orange', dash='solid')))
+        preds = model.predict(future_dates)
 
-        fig2.update_layout(
-            title=f'{ticker} Cointegration Graph (Price vs Sentiment)',
+        future_dates = pd.to_datetime([pd.Timestamp.fromordinal(int(date)) for date in future_dates.ravel()])
+        preds_csv = pd.DataFrame(preds,columns=["Predictions"])
+        preds_csv.index = future_dates
+        
+        past_dates = pd.to_datetime([pd.Timestamp.fromordinal(int(date)) for date in dates[-90:].ravel()])
+        #future_dates = pd.to_datetime([pd.Timestamp.fromordinal(int(date)) for date in future_dates.ravel()])
+
+        # Concatenate past and future dates
+        dates_combined = np.concatenate([past_dates, future_dates])
+
+        # Concatenate the corresponding prices and predictions
+        prices_combined = np.concatenate([prices[-90:], preds])
+        
+
+        fig1 = go.Figure()
+        
+        fig1.add_trace(go.Scatter(x=dates_combined, y=prices_combined, mode='lines', name='Prices', line=dict(color='blue', dash='solid')))
+
+        fig1.update_layout(
+            title=f'{ticker} Stock Price in the next 90 days',
             xaxis_title='Date',
-            yaxis_title='Normalized Price / Sentiment',
-            xaxis_range=[data.index[-180], data.index[-1]],
-            template='plotly_dark'
+            yaxis_title='Price',
+            xaxis_range=[dates_combined[-180],dates_combined[-1]],
+            template='seaborn'
         )
 
-        # Plot the cointegration graph
-        st.plotly_chart(fig2)
+        st.plotly_chart(fig1)
 
-        sents = data['Sentiments'].to_frame()
-        sent_csv = sents.to_csv(index=False)
-        st.download_button(label="Export Sentiment as csv",data=sent_csv,file_name="sentiment.csv",mime="text/csv",)
+        #sents = data['Sentiments'].to_frame()
+        #sent_csv = sents.to_csv(index=False)
+        
+        preds_csv = preds_csv.to_csv(index=False)
+        st.download_button(label="Export Predictions as csv",data=preds_csv,file_name="preds.csv",mime="text/csv",)
     except Exception as e:
         st.error("Stock Not Found")
+        st.error(e)
