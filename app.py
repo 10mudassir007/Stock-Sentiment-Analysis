@@ -6,7 +6,6 @@ import plotly.graph_objects as go
 #from statsmodels.tsa.stattools import coint
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVR
-from statsmodels.tsa.arima.model import ARIMA
 
 ticker = st.text_input("Enter text")
 button = st.button("Predict")
