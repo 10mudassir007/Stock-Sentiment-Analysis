@@ -154,4 +154,3 @@ if button:
         st.download_button(label="Export Predictions as csv",data=preds_csv,file_name="preds.csv",mime="text/csv",)
     except Exception as e:
         st.error("Stock Not Found")
-        st.error(e)
