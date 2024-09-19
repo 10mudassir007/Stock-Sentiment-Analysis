@@ -9,7 +9,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVR
 
 
-ticker = "AAPL"#st.text_input("Enter text")
+ticker = st.text_input("Enter text")
 button = st.button("Predict")
 
 if button:
