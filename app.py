@@ -2,12 +2,14 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 import streamlit as st
+from hmmlearn import hmm
 import plotly.graph_objects as go
 #from statsmodels.tsa.stattools import coint
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVR
 
-ticker = st.text_input("Enter text")
+
+ticker = "AAPL"#st.text_input("Enter text")
 button = st.button("Predict")
 
 if button:
@@ -72,7 +74,7 @@ if button:
         fig.add_trace(go.Scatter(x=data.index[-200:], y=data['200MA'][-200:], mode='lines', name='200-day MA', line=dict(color='blue', dash='dash')))
 
         fig.update_layout(
-            title=f'{ticker} Stock Price Over Last Month',
+            title=f'{ticker} Stock MAs Over six Month',
             xaxis_title='Date',
             yaxis_title='Price',
             xaxis_range=[data.index[-180], data.index[-1]],
@@ -105,6 +107,7 @@ if button:
 
         fig1 = go.Figure()
         
+        
         fig1.add_trace(go.Scatter(x=dates_combined, y=prices_combined, mode='lines', name='Prices', line=dict(color='blue', dash='solid')))
 
         fig1.update_layout(
@@ -117,6 +120,33 @@ if button:
 
         st.plotly_chart(fig1)
 
+        #prices = np.array(data['Close'])
+
+        model = hmm.GaussianHMM(
+            n_components=3,
+            covariance_type="full",
+            n_iter=50000,
+        )
+        prices = np.array(prices).reshape(-1,1)
+        model.fit(prices)
+
+        n_steps = len(future_dates)
+        future_prices, future_states = model.sample(n_steps)
+        prices_combined2 = np.concatenate([prices[-90:],future_prices])
+        fig2 = go.Figure()
+        fig2.add_trace(go.Scatter(x=dates_combined, y=prices_combined2.flatten(), mode='lines', name='Prices', line=dict(color='blue', dash='solid')))
+        
+        fig2.update_layout(
+            title=f'{ticker} Stock Price in the next 90 days',
+            xaxis_title='Date',
+            yaxis_title='Price',
+            xaxis_range=[dates_combined[-180],dates_combined[-1]],
+            template='seaborn'
+        )
+
+        st.plotly_chart(fig2)
+
+    
         #sents = data['Sentiments'].to_frame()
         #sent_csv = sents.to_csv(index=False)
         
