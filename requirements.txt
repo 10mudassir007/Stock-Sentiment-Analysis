@@ -4,3 +4,4 @@ statsmodels==0.14.2
 scikit-learn==1.5.0
 pandas==2.2.2
 numpy==1.26.4
+hmmlearn==0.3.2
