@@ -127,8 +127,8 @@ if button:
             covariance_type="tied",
             n_iter=10000,
             tol=1e-3,                 
-            random_state=42,        
-            verbose=True              
+            random_state=42,   
+            
 )
         
         prices = np.array(prices).reshape(-1,1)
