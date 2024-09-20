@@ -16,7 +16,7 @@ if button:
     
     try:
         stock = yf.Ticker(ticker)
-        data = stock.history(period='5y')
+        data = stock.history(period='10y')
         stock_price = data['Close'][-1]
         prices = data['Close']
         sc = MinMaxScaler(feature_range=(0, 1))
@@ -124,29 +124,51 @@ if button:
 
         model = hmm.GaussianHMM(
             n_components=3,
-            covariance_type="full",
-            n_iter=50000,
-        )
+            covariance_type="tied",
+            n_iter=10000,
+            tol=1e-3,                 
+            random_state=42,        
+            verbose=True              
+)
+        
         prices = np.array(prices).reshape(-1,1)
         model.fit(prices)
 
         n_steps = len(future_dates)
         future_prices, future_states = model.sample(n_steps)
         prices_combined2 = np.concatenate([prices[-90:],future_prices])
-        fig2 = go.Figure()
-        fig2.add_trace(go.Scatter(x=dates_combined, y=prices_combined2.flatten(), mode='lines', name='Prices', line=dict(color='blue', dash='solid')))
+
+        states_combined = np.concatenate([np.zeros(90), future_states])  # Assume all past prices are state 0 for simplicity
+
+        # Create the Plotly figure for predicted prices with color-coded states
         
-        fig2.update_layout(
-            title=f'{ticker} Stock Price in the next 90 days',
+        fig3 = go.Figure()
+        color_map = {
+            0: "green",   # Example: State 0 -> Bullish
+            1: "orange",  # Example: State 1 -> Neutral
+            2: "red"      # Example: State 2 -> Bearish
+        }
+        # Plot by state, assigning colors to each segment according to the state
+        for i in range(1, len(dates_combined)):
+            fig3.add_trace(go.Scatter(
+                x=dates_combined[i-1:i+1].flatten(),  # Two consecutive dates to form a line segment
+                y=prices_combined2[i-1:i+1].flatten(),  # Two consecutive prices
+                mode='lines',
+                line=dict(color=color_map[future_states[i-90]] if i >= 90 else color_map[0], width=2),
+                showlegend=False  # We only want to show one legend entry
+            ))
+
+        # Update the layout for better presentation
+        fig3.update_layout(
+            title=f'{ticker} Stock Price Predictions for the Next 90 Days',
             xaxis_title='Date',
             yaxis_title='Price',
-            xaxis_range=[dates_combined[-180],dates_combined[-1]],
+            xaxis_range=[dates_combined[-180], dates_combined[-1]],  # Show the last 180 days
             template='seaborn'
         )
 
-        st.plotly_chart(fig2)
-
-    
+        # Show the chart in the Streamlit app
+        st.plotly_chart(fig3)
         #sents = data['Sentiments'].to_frame()
         #sent_csv = sents.to_csv(index=False)
         
@@ -154,3 +176,4 @@ if button:
         st.download_button(label="Export Predictions as csv",data=preds_csv,file_name="preds.csv",mime="text/csv",)
     except Exception as e:
         st.error("Stock Not Found")
+        st.error(e)
