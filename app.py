@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 import streamlit as st
-from hmmlearn import hmm
+from hmmlearn.hmm import *
 import plotly.graph_objects as go
 #from statsmodels.tsa.stattools import coint
 from sklearn.preprocessing import MinMaxScaler
@@ -16,7 +16,7 @@ if button:
     
     try:
         stock = yf.Ticker(ticker)
-        data = stock.history(period='10y')
+        data = stock.history(period='max')
         stock_price = data['Close'][-1]
         prices = data['Close']
         sc = MinMaxScaler(feature_range=(0, 1))
@@ -25,9 +25,9 @@ if button:
         data['Low'] = sc.fit_transform(data[['Low']])
         data['High'] = sc.fit_transform(data[['High']])
         data['Sum'] = (data['Close'] + data['High'] + data['Low'] + data['Open'])
-        
-        
-        
+        data['TMRW'] = data['Close'].shift(-1)
+        data['Label'] = (data['Close'] < data['TMRW']).astype(int)
+        st.write(data)
         # Adjusted Sentiments Calculation
         sentiments = [0 for _ in range(len(data['Sum']))]
         
@@ -122,11 +122,12 @@ if button:
 
         #prices = np.array(data['Close'])
 
-        model = hmm.GaussianHMM(
+        model = GaussianHMM(
             n_components=3,
             covariance_type="tied",
             n_iter=10000,
-            tol=1e-3,                 
+            tol=1e-5,
+                             
             random_state=42,   
             
 )
@@ -139,7 +140,7 @@ if button:
         prices_combined2 = np.concatenate([prices[-90:],future_prices])
 
         states_combined = np.concatenate([np.zeros(90), future_states])  # Assume all past prices are state 0 for simplicity
-
+        st.write(states_combined)
         # Create the Plotly figure for predicted prices with color-coded states
         
         fig3 = go.Figure()
@@ -171,7 +172,45 @@ if button:
         st.plotly_chart(fig3)
         #sents = data['Sentiments'].to_frame()
         #sent_csv = sents.to_csv(index=False)
-        
+        def plot_time_series_with_labels(dates, prices, labels):
+            fig4 = go.Figure()
+
+            # Define the color map for labels
+            color_map = {
+                0: "red",    # Bearish (label 0)
+                1: "green"   # Bullish (label 1)
+            }
+
+            # Plot the time series with different colors based on the labels
+            for i in range(1, len(dates)):
+                fig4.add_trace(go.Scatter(
+                    x=dates[i-1:i+1].flatten(),  # Two consecutive dates to form a line segment
+                    y=prices[i-1:i+1].flatten(),  # Two consecutive prices
+                    mode='lines',
+                    line=dict(color=color_map[labels[i]], width=2),  # Use the label to set the color
+                    showlegend=False  # Don't show multiple legend entries for each line segment
+                ))
+
+            # Update the layout for better presentation
+            fig4.update_layout(
+                title='Stock Price with Buy/Sell Labels',
+                xaxis_title='Date',
+                yaxis_title='Price',
+                template='seaborn'
+            )
+
+            return fig4
+
+        # Example usage with your data (replace these with actual values)
+        dates_combined = np.array(data.index)
+        prices_combined2 = np.array(data['Close'])
+        labels = np.array(data['Label'])
+
+        # Call the function to create the plot
+        fig4 = plot_time_series_with_labels(dates_combined, prices_combined2, labels)
+
+        # To display the plot (if using Streamlit)
+        st.plotly_chart(fig4)
         preds_csv = preds_csv.to_csv(index=False)
         st.download_button(label="Export Predictions as csv",data=preds_csv,file_name="preds.csv",mime="text/csv",)
     except Exception as e:
