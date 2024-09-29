@@ -30,7 +30,6 @@ if button:
         data['Sum'] = (data['Close'] + data['High'] + data['Low'] + data['Open'])
         data['TMRW'] = data['Close'].shift(-1)
         data['Label'] = (data['Close'] < data['TMRW']).astype(int)
-        st.write(data)
         # Adjusted Sentiments Calculation
         sentiments = [0 for _ in range(len(data['Sum']))]
         
