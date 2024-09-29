@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 import streamlit as st
-from hmmlearn.hmm import *
+from hmmlearn.hmm import GaussianHMM
 import plotly.graph_objects as go
 #from statsmodels.tsa.stattools import coint
 from sklearn.preprocessing import MinMaxScaler
@@ -27,7 +27,6 @@ if button:
         data['Sum'] = (data['Close'] + data['High'] + data['Low'] + data['Open'])
         data['TMRW'] = data['Close'].shift(-1)
         data['Label'] = (data['Close'] < data['TMRW']).astype(int)
-        st.write(data)
         # Adjusted Sentiments Calculation
         sentiments = [0 for _ in range(len(data['Sum']))]
         
@@ -140,7 +139,6 @@ if button:
         prices_combined2 = np.concatenate([prices[-90:],future_prices])
 
         states_combined = np.concatenate([np.zeros(90), future_states])  # Assume all past prices are state 0 for simplicity
-        st.write(states_combined)
         # Create the Plotly figure for predicted prices with color-coded states
         
         fig3 = go.Figure()
@@ -203,7 +201,7 @@ if button:
 
         # Example usage with your data (replace these with actual values)
         dates_combined = np.array(data.index)
-        prices_combined2 = np.array(data['Close'])
+        prices_combined2 = np.array(prices)
         labels = np.array(data['Label'])
 
         # Call the function to create the plot
